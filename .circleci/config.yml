@@ -43,7 +43,7 @@ jobs:
     steps:
       - checkout
       - restore_cache:
-        keys: [test-frontend]
+          keys: [test-frontend]
       - run:
           name: testing frontend
           command:
@@ -56,7 +56,7 @@ jobs:
     steps:
       - checkout
       - restore_cache:
-        keys: [test-backend]
+          keys: [test-backend]
       - run:
           name: testing backend
           command:
