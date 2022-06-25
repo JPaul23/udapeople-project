@@ -43,12 +43,11 @@ jobs:
     steps:
       - checkout
       - restore_cache:
-          keys: [test-frontend]
+          keys: [frontend-build]
       - run:
           name: testing frontend
           command: |
             cd frontend
-            npm install
             npm run test
                 
   test-backend:
@@ -56,12 +55,11 @@ jobs:
     steps:
       - checkout
       - restore_cache:
-          keys: [test-backend]
+          keys: [backend-build]
       - run:
           name: testing backend
           command: |
             cd backend
-            npm install
             npm run test
     
 workflows:
