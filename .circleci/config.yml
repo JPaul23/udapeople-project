@@ -1,5 +1,8 @@
 version: 2.1
 
+orbs: 
+  slack: circleci/slack@4.10.1
+
 executors:
   my-node-executor:
     docker:
@@ -21,6 +24,10 @@ jobs:
       - save_cache:
           paths: [frontend/node_modules]
           key: frontend-build
+      - slack/notify:
+          channel: notify
+          event: fail
+          template: basic_fail_1
 
   build-backend:
     executor: my-node-executor
@@ -37,6 +44,10 @@ jobs:
       - save_cache:
           paths: [backend/node_modules]
           key: backend-build
+      - slack/notify:
+          channel: notify
+          event: fail
+          template: basic_fail_1
 
   test-frontend:
     executor: my-node-executor
@@ -49,6 +60,10 @@ jobs:
           command: |
             cd frontend
             npm run test
+      - slack/notify:
+          channel: notify
+          event: fail
+          template: basic_fail_1
 
   test-backend:
     executor: my-node-executor
@@ -61,6 +76,10 @@ jobs:
           command: |
             cd backend
             npm run test
+      - slack/notify:
+          channel: notify
+          event: fail
+          template: basic_fail_1
 
   scan-frontend:
     executor: my-node-executor
@@ -72,8 +91,11 @@ jobs:
           name: scanning-frontend
           command: |
             cd frontend
-            npm install oauth-sign@^0.9.0
             npm audit fix --audit-level=critical --force
+      - slack/notify:
+          channel: notify
+          event: fail
+          template: basic_fail_1
 
   scan-backend:
     executor: my-node-executor
@@ -86,6 +108,10 @@ jobs:
           command: |
             cd backend
             npm audit fix --audit-level=critical --force
+      - slack/notify:
+          channel: notify
+          event: fail
+          template: basic_fail_1
 
 workflows:
   default:
@@ -100,3 +126,4 @@ workflows:
           requires: [build-backend]
       - scan-frontend:
           requires: [build-frontend]
+          context: [circle notify]
