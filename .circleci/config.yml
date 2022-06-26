@@ -14,8 +14,15 @@ commands:
     steps:
       - slack/notify:
           channel: notify
+          mentions: @jean.paul
           event: fail
           template: basic_fail_1
+
+      - slack/notify:
+          channel: notify
+          mentions: @here
+          event: pass
+          template: basic_success_1
 
 jobs:
   build-frontend:
@@ -33,10 +40,7 @@ jobs:
       - save_cache:
           paths: [frontend/node_modules]
           key: frontend-build
-      - slack/notify:
-          channel: notify
-          event: fail
-          template: basic_fail_1
+      - slack-notifications
 
   build-backend:
     executor: my-node-executor
@@ -122,7 +126,8 @@ jobs:
 workflows:
   default:
     jobs:
-      - build-frontend
+      - build-frontend:
+          context: [circle notify]
       - build-backend
       - test-frontend:
           requires: [build-frontend]
