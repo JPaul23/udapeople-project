@@ -10,6 +10,7 @@ log.txt
 npm-debug.log*
 
 .config.yml
+.db
 .idea/
 .ionic/
 .sourcemaps/
