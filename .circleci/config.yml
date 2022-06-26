@@ -9,7 +9,7 @@ executors:
       - image: circleci/node:13.8.0
   my-aws-executor:
     docker:
-      - image: amazon/aws-cli
+      - image: cimg/base:2020.01
 
 commands:
   destroy-environment:
@@ -129,6 +129,7 @@ jobs:
     executor: my-aws-executor
     steps:
       - checkout
+      - aws-cli/setup
       - run:
           name: Ensure back-end infrastructure exists
           command: |
@@ -160,8 +161,6 @@ jobs:
       - slack-notifications
       - destroy-environment:
           workflow_id: ${CIRCLE_WORKFLOW_ID:0:7}
-      # Here's where you will add some code to rollback on failure 
-
 
 workflows:
   default:
@@ -183,7 +182,5 @@ workflows:
           requires: [build-frontend]
           context: [circle notify]
       - deploy-infrastructure:
-          requires:
-            - scan-backend
-            - scan-frontend
+          requires: [test-frontend, test-backend, scan-frontend, scan-backend]
           context: [circle notify]
