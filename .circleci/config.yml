@@ -72,7 +72,7 @@ jobs:
           name: scanning-frontend
           command: |
             cd frontend
-            npm audit --audit-level=critical --force
+            npm audit fix --audit-level=critical --force
 
   scan-backend:
     executor: my-node-executor
@@ -84,7 +84,7 @@ jobs:
           name: scanning-backend
           command: |
             cd backend
-            npm audit --audit-level=critical --force
+            npm audit fix --audit-level=critical --force
 
 workflows:
   default:
