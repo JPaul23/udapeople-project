@@ -8,6 +8,15 @@ executors:
     docker:
       - image: circleci/node:13.8.0
 
+commands:
+  slack-notifications:
+    description: Provide slack notifications about jobs status.
+    steps:
+      - slack/notify:
+          channel: notify
+          event: fail
+          template: basic_fail_1
+
 jobs:
   build-frontend:
     executor: my-node-executor
@@ -92,10 +101,7 @@ jobs:
           command: |
             cd frontend
             npm audit fix --audit-level=critical --force
-      - slack/notify:
-          channel: notify
-          event: fail
-          template: basic_fail_1
+      - slack-notifications
 
   scan-backend:
     executor: my-node-executor
