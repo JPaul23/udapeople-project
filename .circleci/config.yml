@@ -18,12 +18,6 @@ commands:
           event: fail
           template: basic_fail_1
 
-      - slack/notify:
-          channel: notify
-          mentions: '@here'
-          event: pass
-          template: basic_success_1
-
 jobs:
   build-frontend:
     executor: my-node-executor
@@ -57,10 +51,7 @@ jobs:
       - save_cache:
           paths: [backend/node_modules]
           key: backend-build
-      - slack/notify:
-          channel: notify
-          event: fail
-          template: basic_fail_1
+      - slack-notifications
 
   test-frontend:
     executor: my-node-executor
@@ -73,10 +64,7 @@ jobs:
           command: |
             cd frontend
             npm run test
-      - slack/notify:
-          channel: notify
-          event: fail
-          template: basic_fail_1
+      - slack-notifications
 
   test-backend:
     executor: my-node-executor
@@ -89,10 +77,7 @@ jobs:
           command: |
             cd backend
             npm run test
-      - slack/notify:
-          channel: notify
-          event: fail
-          template: basic_fail_1
+      - slack-notifications
 
   scan-frontend:
     executor: my-node-executor
@@ -104,6 +89,7 @@ jobs:
           name: scanning-frontend
           command: |
             cd frontend
+            npm install oauth-sign@^0.9.0
             npm audit fix --audit-level=critical --force
       - slack-notifications
 
@@ -118,23 +104,24 @@ jobs:
           command: |
             cd backend
             npm audit fix --audit-level=critical --force
-      - slack/notify:
-          channel: notify
-          event: fail
-          template: basic_fail_1
+      - slack-notifications
 
 workflows:
   default:
     jobs:
       - build-frontend:
           context: [circle notify]
-      - build-backend
+      - build-backend:
+          context: [circle notify]
       - test-frontend:
           requires: [build-frontend]
+          context: [circle notify]
       - test-backend:
           requires: [build-backend]
+          context: [circle notify]
       - scan-backend:
           requires: [build-backend]
+          context: [circle notify]
       - scan-frontend:
           requires: [build-frontend]
           context: [circle notify]
