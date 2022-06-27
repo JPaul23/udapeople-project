@@ -32,6 +32,21 @@ commands:
             aws cloudformation delete-stack --stack-name frontend-<<parameters.workflow_id>>
             aws cloudformation delete-stack --stack-name backend-<<parameters.workflow_id>>
 
+  revert-migrations:
+    description: Revert the last migration if successfully run in the current workflow.
+    parameters:
+      workflow_id:
+        type: string
+    steps:
+      - run:
+          name: Revert migrations
+          when: on_fail
+          command: |
+            status=$( curl --insecure https://kvdb.io/QBeGgdSsje56jKqLTYMMWK/migration_${CIRCLE_WORKFLOW_ID:0:7})
+            echo $status
+            if [[ "${status}" == 1 ]]; then
+              npm run migrations:revert
+            fi
   slack-notifications:
     description: Provide slack notifications about jobs status.
     steps:
@@ -225,7 +240,82 @@ jobs:
           name: Send migration results to kvdb.io
           command: |
             curl https://kvdb.io/QBeGgdSsje56jKqLTYMMWK/migration_${CIRCLE_WORKFLOW_ID:0:7}  -d '1'
+
+      - persist_to_workspace:
+          root: ~/project
+          paths:
+            - backend
+      - revert-migrations
       - slack-notifications
+      - destroy-environment:
+          workflow_id: "${CIRCLE_WORKFLOW_ID:0:7}"
+
+  deploy-frontend:
+    executor: my-node-executor
+    steps:
+      - checkout
+      - restore_cache:
+          keys: [frontend-build]
+      - aws-cli/setup
+      - run:
+          name: Install dependencies
+          command: |
+            cd frontend
+            sudo npm install webpack-dev-server -g
+            sudo npm install
+            node --version
+      - run:
+          name: Get backend url
+          command: |
+            export BACKEND_IP=$(sed -n 2p .circleci/ansible/inventory.txt)
+            export API_URL="http://${BACKEND_IP}:3030"
+            echo "${API_URL}"
+            echo API_URL="http://${BACKEND_IP}:3030" >> frontend/.env
+      - run:  
+          name: Build frontend
+          command: |
+            cd frontend
+            ls -la
+            cat .env
+            npm run build
+      - run:
+          name: Deploy frontend objects
+          command: |
+            aws s3 cp --recursive frontend/dist "s3://udapeople-${CIRCLE_WORKFLOW_ID:0:7}
+      - slack-notifications
+      - revert-migrations
+      - destroy-environment:
+          workflow_id: "${CIRCLE_WORKFLOW_ID:0:7}"
+
+  deploy-backend:
+    executor: my-python-executor
+    steps:
+      - checkout
+      - add_ssh_keys:
+          fingerprints:
+            - "24:3b:54:f5:83:68:bf:ab:a7:6a:b9:dd:a1:6a:55:83"
+      - restore_cache:
+          keys: [backend-build]
+      - attach_workspace:
+          at: ~/
+      - run:
+          name: Install dependencies
+          command: |
+            apk add --update ansible openssh-client tar gzip aws-cli
+      - run:
+          name: compress backend
+          command: |
+            cd home/
+            tar czf backend.tar.gz -P /home/circleci/project/backend/dist
+      - run:
+          name: Deploy backend
+          command: |
+            cd .circleci/ansible
+            echo "Contents  of the inventory.txt file is -------"
+            cat inventory.txt
+            ansible-playbook -i inventory.txt .circleci/ansible/deploy-backend.yml
+      - slack-notifications
+      - revert-migrations
       - destroy-environment:
           workflow_id: "${CIRCLE_WORKFLOW_ID:0:7}"
 
@@ -255,5 +345,11 @@ workflows:
           requires: [deploy-infrastructure]
           context: [circle notify]
       - run-migrations:
+          requires: [configure-infrastructure]
+          context: [circle notify]
+      - deploy-frontend:
+          requires: [run-migrations]
+          context: [circle notify]
+      - deploy-backend:
           requires: [configure-infrastructure]
           context: [circle notify]
