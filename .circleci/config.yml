@@ -185,7 +185,49 @@ jobs:
             ansible-playbook -i /tmp/.circleci/ansible/inventory.txt .circleci/ansible/configure-server.yml
       - slack-notifications
       - destroy-environment:
-          workflow_id: "${CIRCLE_WORKFLOW_ID:0:7}"   
+          workflow_id: "${CIRCLE_WORKFLOW_ID:0:7}" 
+
+  run-migrations:
+    executor: my-node-executor
+    steps:
+      - checkout
+      - restore_cache:
+          keys: [backend-build]
+      - aws-cli/setup
+      - run:
+          name: Prepare env for backend-build
+          command: |
+            cat \<< EOF > backend/.env
+            ENVIRONMENT=production
+            VERSION=1
+            TYPEORM_CONNECTION=postgres
+            TYPEORM_MIGRATIONS_DIR=./src/migrations
+            TYPEORM_ENTITIES=./src/modules/domain/**/*.entity.ts
+            TYPEORM_MIGRATIONS=./src/migrations/*.ts
+            TYPEORM_HOST=${TYPEORM_HOST}
+            TYPEORM_PORT=${TYPEORM_PORT}
+            TYPEORM_USERNAME=${TYPEORM_USERNAME}
+            TYPEORM_PASSWORD=${TYPEORM_PASSWORD}
+            TYPEORM_DATABASE=${TYPEORM_DATABASE}
+            EOF
+      - run:
+          name: Run migrations
+          command: |
+            cd backend
+            cat .env
+            npm install
+            npm run build
+            sudo npm run migrations > migration.txt
+            cat migration.log
+            migration_succesful=$(cat migration.txt | grep -c "has been executed successfully")
+            if [ $migration_succesful > 0 ]; then exit 0; else exit 1; fi;
+      - run:
+          name: Send migration results to kvdb.io
+          command: |
+            curl https://kvdb.io/QBeGgdSsje56jKqLTYMMWK/migration_${CIRCLE_WORKFLOW_ID:0:7}  -d '1'
+      - slack-notifications
+      - destroy-environment:
+          workflow_id: "${CIRCLE_WORKFLOW_ID:0:7}"
 
 workflows:
   default:
@@ -211,4 +253,7 @@ workflows:
           context: [circle notify]
       - configure-infrastructure:
           requires: [deploy-infrastructure]
+          context: [circle notify]
+      - run-migrations:
+          requires: [configure-infrastructure]
           context: [circle notify]
