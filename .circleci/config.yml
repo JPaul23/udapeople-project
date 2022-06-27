@@ -11,6 +11,9 @@ executors:
   my-aws-executor:
     docker:
       - image: cimg/base:2020.01
+  my-python-executor:
+    docker:
+      - image: python:3.9.1-alpine3.12
 
 commands:
   destroy-environment:
@@ -163,6 +166,27 @@ jobs:
       - destroy-environment:
           workflow_id: ${CIRCLE_WORKFLOW_ID:0:7}
 
+  configure-infrastructure:
+    executor: my-python-executor
+    steps:
+      - checkout
+      - add_ssh_keys:
+          fingerprints:
+            - "24:3b:54:f5:83:68:bf:ab:a7:6a:b9:dd:a1:6a:55:83"
+      - attach_workspace:
+          at: /tmp/.circleci/ansible
+      - run:
+          name: Install dependencies
+          command: |
+            apk add --update ansible aws-cli
+      - run:
+          name: Configure server
+          command: |
+            ansible-playbook -i /tmp/.circleci/ansible/inventory.txt .circleci/ansible/configure-server.yml
+      - slack-notifications
+      - destroy-environment:
+          workflow_id: "${CIRCLE_WORKFLOW_ID:0:7}"   
+
 workflows:
   default:
     jobs:
@@ -184,4 +208,7 @@ workflows:
           context: [circle notify]
       - deploy-infrastructure:
           requires: [test-frontend, test-backend, scan-frontend, scan-backend]
+          context: [circle notify]
+      - configure-infrastructure:
+          requires: [deploy-infrastructure]
           context: [circle notify]
