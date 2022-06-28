@@ -270,13 +270,15 @@ jobs:
           name: Install dependencies
           command: |
             cd frontend
-            sudo npm install webpack-dev-server -g
             sudo npm install
             node --version
       - run:
           name: Get backend url
           command: |
-            export BACKEND_IP=$(sed -n 2p .circleci/ansible/inventory.txt)
+            export BACKEND_IP=$(aws ec2 describe-instances \
+              --query 'Reservations[*].Instances[*].PublicIpAddress' \
+              --filters "Name=tag:project,Values=udapeople" \
+              --output)
             export API_URL="http://${BACKEND_IP}:3030"
             echo "${API_URL}"
             echo API_URL="http://${BACKEND_IP}:3030" >> frontend/.env
@@ -290,7 +292,7 @@ jobs:
       - run:
           name: Deploy frontend objects
           command: |
-            aws s3 cp --recursive frontend/dist "s3://udapeople-${CIRCLE_WORKFLOW_ID:0:7}
+            aws s3 cp dist s3://udapeople-"${CIRCLE_WORKFLOW_ID}" --recursive
       - slack-notifications
       - destroy-environment:
           workflow_id: "${CIRCLE_WORKFLOW_ID:0:7}"
@@ -313,7 +315,6 @@ jobs:
       - run:
           name: compress backend
           command: |
-            cd home/
             tar czf backend.tar.gz -P /home/circleci/project/backend/dist
       - run:
           name: Deploy backend
