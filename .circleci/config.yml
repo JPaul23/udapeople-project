@@ -191,7 +191,7 @@ jobs:
           fingerprints:
             - "24:3b:54:f5:83:68:bf:ab:a7:6a:b9:dd:a1:6a:55:83"
       - attach_workspace:
-          at: /tmp/.circleci/ansible
+          at: ~/
       - run:
           name: Install dependencies
           command: |
@@ -199,7 +199,7 @@ jobs:
       - run:
           name: Configure server
           command: |
-            ansible-playbook -i /tmp/.circleci/ansible/inventory.txt .circleci/ansible/configure-server.yml
+            ansible-playbook -i .circleci/ansible/inventory.txt .circleci/ansible/configure-server.yml
       - slack-notifications
       - destroy-environment:
           workflow_id: "${CIRCLE_WORKFLOW_ID:0:7}" 
@@ -255,6 +255,8 @@ jobs:
     executor: my-node-executor
     steps:
       - checkout
+      - attach_workspace:
+          at: ~/
       - restore_cache:
           keys: [frontend-build]
       - aws-cli/setup
@@ -313,7 +315,7 @@ jobs:
             cd .circleci/ansible
             echo "Contents  of the inventory.txt file is -------"
             cat inventory.txt
-            ansible-playbook -i inventory.txt .circleci/ansible/deploy-backend.yml
+            ansible-playbook -i .circleci/ansible/inventory.txt .circleci/ansible/deploy-backend.yml
       - slack-notifications
       - destroy-environment:
           workflow_id: "${CIRCLE_WORKFLOW_ID:0:7}"
@@ -350,5 +352,5 @@ workflows:
           requires: [run-migrations]
           context: [circle notify]
       - deploy-backend:
-          requires: [configure-infrastructure]
+          requires: [run-migrations]
           context: [circle notify]
