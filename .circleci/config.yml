@@ -275,23 +275,19 @@ jobs:
       - run:
           name: Get backend url
           command: |
-            export BACKEND_IP=$(aws ec2 describe-instances --query 'Reservations[*].Instances[*].PublicIpAddress'--filters "Name=tag:project,Values=udapeople" --output)
+            export BACKEND_IP=$(aws ec2 describe-instances --query 'Reservations[*].Instances[*].PublicIpAddress' --filters "Name=tag:project,Values=udapeople" --output text)
             export API_URL="http://${BACKEND_IP}:3030"
             echo "${API_URL}"
             echo API_URL="http://${BACKEND_IP}:3030" >> frontend/.env
       - run:  
-          name: Build frontend
+          name: Build frontend & Deploy frontend objects
           command: |
             cd frontend
             npm install
             ls -la
             cat .env
             npm run build
-            tar -czvf artifact-"${CIRCLE_WORKFLOW_ID:0:7}".tar.gz dist
-      - run:
-          name: Deploy frontend objects
-          command: |
-            aws s3 cp dist s3://udapeople-8e7487a-"${CIRCLE_WORKFLOW_ID}" --recursive
+            aws s3 cp dist s3://udapeople-"${CIRCLE_WORKFLOW_ID}" --recursive
       - slack-notifications
       - destroy-environment:
           workflow_id: "${CIRCLE_WORKFLOW_ID:0:7}"
@@ -307,13 +303,12 @@ jobs:
           keys: [backend-build]
       - attach_workspace:
           at: ~/
-      - aws-cli/setup
       - run:
           name: Install dependencies
           command: |
-            apk add --update ansible openssh-client tar gzip
+            apk add --update ansible aws-cli openssh-client tar gzip
       - run:
-          name: compress backend
+          name: build andcompress backend
           command: |
             cd backend
             npm i
