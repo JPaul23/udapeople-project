@@ -23,10 +23,19 @@ commands:
         type: string  
     steps:
       - run:
-          name: Destroy environments
+          name: Destroy Buckets
           when: on_fail
           command: |
-            aws s3 rm s3://udapeople-<<parameters.workflow_id>> --recursive
+            echo "Destroying environment: << parameters.workflow_id >> "
+            if aws s3 ls | grep udapeople-<<parameters.workflow_id>>; then
+              aws s3 rm s3://udapeople-<<parameters.workflow_id>> --recursive
+            fi
+            
+      - run:
+          name: Destroy Stacks
+          when: on_fail
+          command: |
+            echo "Destroying environment: << parameters.workflow_id >> "
             aws cloudformation delete-stack --stack-name udapeople-frontend-<<parameters.workflow_id>>
             aws cloudformation delete-stack --stack-name udapeople-backend-<<parameters.workflow_id>>
       - revert-migrations:
@@ -193,7 +202,7 @@ jobs:
       - run:
           name: Install dependencies
           command: |
-            apk add --update ansible aws-cli
+            add --update ansible aws-cli
       - run:
           name: Configure server
           command: |
