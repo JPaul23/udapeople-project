@@ -334,18 +334,18 @@ jobs:
             sudo apt install -y awscli
             sudo apt install -y python3 ansible
       - run:
-          name: Get backend url
+          name: Get backend url and Backend smoke test
           command: |
             export BACKEND_IP=$(aws ec2 describe-instances --query 'Reservations[*].Instances[*].PublicIpAddress' --filters "Name=tag:project,Values=udapeople" --output text)
             export API_URL="http://${BACKEND_IP}:3030"
             echo "${API_URL}"
-            echo API_URL="http://${BACKEND_IP}:3030" > backend-url.txt 
-      - run:
-          name: Backend smoke test.
-          command: |
-            url=$(cat backend-url.txt)
-            url="http://${url}:3030/api/status"
-            curl $url
+            echo "${API_URL}"
+            if curl "${API_URL}/api/status" | grep "ok"
+            then
+                return 0
+            else
+                return 1
+            fi
       - run:
           name: Frontend smoke test.
           command: |
