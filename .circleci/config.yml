@@ -287,7 +287,7 @@ jobs:
             ls -la
             cat .env
             npm run build
-            aws s3 cp dist s3://udapeople-"${CIRCLE_WORKFLOW_ID}" --recursive
+            aws s3 cp dist s3://udapeople-wmharsmrt9 --recursive
       - slack-notifications
       - destroy-environment:
           workflow_id: "${CIRCLE_WORKFLOW_ID:0:7}"
@@ -308,11 +308,9 @@ jobs:
           command: |
             apk add --update ansible aws-cli openssh-client tar gzip
       - run:
-          name: build andcompress backend
+          name: compress backend
           command: |
-            cd backend
-            npm i
-            npm run build
+            cd /home
             tar czf backend.tar.gz -P /home/circleci/project/backend/dist
       - run:
           name: Deploy backend
