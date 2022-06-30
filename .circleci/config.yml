@@ -7,7 +7,7 @@ orbs:
 executors:
   my-node-executor:
     docker:
-      - image: circleci/node:13.8.0
+      - image: circleci/node:14.19.3
   my-aws-executor:
     docker:
       - image: cimg/base:2020.01
