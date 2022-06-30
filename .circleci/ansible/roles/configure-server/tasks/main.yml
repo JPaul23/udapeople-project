@@ -12,9 +12,9 @@
     name: n
     global: yes
 
-- name: install nodejs v13.8.0
+- name: install nodejs v14.19.3
   become: yes
-  command: n 13.8.0
+  command: n 14.19.3
 
 - name: "installing pm2"
   become: yes
