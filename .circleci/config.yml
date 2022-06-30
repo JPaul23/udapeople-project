@@ -267,12 +267,6 @@ jobs:
           keys: [frontend-build]
       - aws-cli/setup
       - run:
-          name: Install dependencies
-          command: |
-            cd frontend
-            sudo npm install
-            node --version
-      - run:
           name: Get backend url
           command: |
             export BACKEND_IP=$(aws ec2 describe-instances --query 'Reservations[*].Instances[*].PublicIpAddress' --filters "Name=tag:project,Values=udapeople" --output text)
@@ -293,24 +287,40 @@ jobs:
       - destroy-environment
 
   deploy-backend:
-    executor: my-python-executor
+    docker:
+      - image: 'cimg/base:stable'
     steps:
       - checkout
+      - aws-cli/setup
+      - node/install:
+          node-version: '14.19.3'
       - add_ssh_keys:
           fingerprints:
             - "24:3b:54:f5:83:68:bf:ab:a7:6a:b9:dd:a1:6a:55:83"
+      - attach_workspace:
+          at: ~/
       - restore_cache:
           keys: [backend-build]
-      - attach_workspace:
-          at: /tmp/artifacts
+      - run:
+          name: Install Ansible
+          command: |
+            sudo apt update
+            sudo apt install software-properties-common -y
+            sudo add-apt-repository --yes --update ppa:ansible/ansible
+            sudo apt install ansible -y 
       - run:
           name: Install dependencies
           command: |
-            apk add --update ansible aws-cli openssh-client tar gzip
+            cd backend
+            npm install
       - run:
           name: compress backend
           command: |
-            tar -C /tmp/artifacts/backend -czvf artifact.tar.gz .
+            cd backend
+            npm run build
+            tar -czf artifact.tar.gz dist/* package*
+            cd ..
+            cp backend/artifact.tar.gz .circleci/ansible/roles/deploy/files
       - run:
           name: Deploy backend
           command: |
@@ -318,7 +328,7 @@ jobs:
             export ANSIBLE_HOST_KEY_CHECKING=False
             echo "Contents  of the inventory.txt file is -------"
             cat inventory.txt
-            ansible-playbook -i /tmp/artifacts/inventory.txt deploy-backend.yml
+            ansible-playbook -i inventory.txt deploy-backend.yml
       - slack-notifications
       - revert-migrations
       - destroy-environment
