@@ -417,6 +417,9 @@ workflows:
           context: [circle notify]
       - deploy-infrastructure:
           requires: [test-frontend, test-backend, scan-frontend, scan-backend]
+          filters:
+            branches:
+              only: [master]
           context: [circle notify]
       - configure-infrastructure:
           requires: [deploy-infrastructure]
