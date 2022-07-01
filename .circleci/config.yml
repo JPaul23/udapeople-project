@@ -292,7 +292,8 @@ jobs:
       - destroy-environment
 
   deploy-backend:
-    executor: my-python-executor
+    docker:
+      - image: 'cimg/base:stable'
     steps:
       - checkout
       - node/install:
@@ -305,9 +306,16 @@ jobs:
       - attach_workspace:
           at: /tmp/artifacts
       - run:
-          name: Install dependencies
+          name: Install Ansible
           command: |
-            apk add --update ansible aws-cli openssh-client tar gzip 
+            sudo apt update
+            sudo apt install software-properties-common -y
+            sudo add-apt-repository --yes --update ppa:ansible/ansible
+            sudo apt install ansible -y
+      # - run:
+      #     name: Install dependencies
+      #     command: |
+      #       apk add --update ansible aws-cli openssh-client tar gzip 
       - run:
           name: compress backend
           command: |
