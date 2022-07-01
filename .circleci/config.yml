@@ -292,8 +292,7 @@ jobs:
       - destroy-environment
 
   deploy-backend:
-    docker:
-      - image: 'cimg/base:stable'
+    executor: my-python-executor
     steps:
       - checkout
       - aws-cli/setup
@@ -312,7 +311,11 @@ jobs:
             sudo apt update
             sudo apt install software-properties-common -y
             sudo add-apt-repository --yes --update ppa:ansible/ansible
-            sudo apt install ansible -y 
+            sudo apt install ansible -y
+      - run:
+          name: Install dependencies
+          command: |
+            apk add --update ansible aws-cli openssh-client tar gzip 
       - run:
           name: compress backend
           command: |
