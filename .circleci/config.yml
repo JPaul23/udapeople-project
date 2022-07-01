@@ -356,9 +356,7 @@ jobs:
             echo ${URL} 
             curl -s ${URL} | grep "Welcome"
 
-      - slack-notifications
-      - revert-migrations
-      - destroy-environment 
+      - slack-notifications 
 
   cloudfront-update:
     executor: my-aws-executor
@@ -446,6 +444,9 @@ workflows:
       - smoke-test:
           requires: [deploy-frontend, deploy-backend]
           context: [circle notify]
+      - hold:
+          type: approval
+          requires: [smoke-test]
       - cloudfront-update:
           requires: [smoke-test]
           context: [circle notify]
