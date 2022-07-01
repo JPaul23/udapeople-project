@@ -182,6 +182,11 @@ jobs:
           root: ~/
           paths:
             - project/.circleci/ansible/inventory.txt
+      - persist_to_workspace:
+          root: .circleci/ansible
+          paths:
+            - inventory.txt
+            
       - slack-notifications
       - destroy-environment
 
@@ -297,10 +302,10 @@ jobs:
       - add_ssh_keys:
           fingerprints:
             - "24:3b:54:f5:83:68:bf:ab:a7:6a:b9:dd:a1:6a:55:83"
-      - attach_workspace:
-          at: ~/
       - restore_cache:
           keys: [backend-build]
+      - attach_workspace:
+          at: /tmp/artifacts
       - run:
           name: Install Ansible
           command: |
@@ -311,8 +316,7 @@ jobs:
       - run:
           name: compress backend
           command: |
-            cd /home
-            tar czf backend.tar.gz -P /home/circleci/project/backend/dist
+            tar -C /tmp/artifacts/backend -czvf artifact.tar.gz .
       - run:
           name: Deploy backend
           command: |
@@ -320,7 +324,7 @@ jobs:
             export ANSIBLE_HOST_KEY_CHECKING=False
             echo "Contents  of the inventory.txt file is -------"
             cat inventory.txt
-            ansible-playbook -i inventory.txt deploy-backend.yml
+            ansible-playbook -i /tmp/artifacts/inventory.txt deploy-backend.yml
       - slack-notifications
       - revert-migrations
       - destroy-environment
