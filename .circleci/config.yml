@@ -1,6 +1,6 @@
 version: 2.1
 
-orbs: 
+orbs:
   slack: circleci/slack@4.10.1
   aws-cli: circleci/aws-cli@1.3.0
 
@@ -17,24 +17,23 @@ executors:
 
 commands:
   destroy-environment:
-    description: Destroy back-end and front-end cloudformation stacks given a workflow ID. 
+    description: Destroy back-end and front-end cloudformation stacks given a workflow ID.
     steps:
-      - run:
-          name: Delete S3 content
-          when: on_fail
-          command: |
-            aws s3 rm s3://udapeople-${CIRCLE_WORKFLOW_ID:0:7} --recursive
-            exit 0
       - run:
           name: Destroy environments
           when: on_fail
           command: |
             aws cloudformation delete-stack --stack-name udapeople-backend-${CIRCLE_WORKFLOW_ID:0:7}
+            aws s3 rm s3://udapeople-${CIRCLE_WORKFLOW_ID:0:7} --recursive
             aws cloudformation delete-stack --stack-name udapeople-frontend-${CIRCLE_WORKFLOW_ID:0:7}
             exit 0
 
   revert-migrations:
     description: Revert the last migration if successfully run in the current workflow.
+    parameters:
+      workflow_id:
+        type: string
+        default: ${CIRCLE_WORKFLOW_ID:0:7}
     steps:
       - restore_cache:
           keys: [backend-build]
@@ -42,20 +41,17 @@ commands:
           name: Revert migrations
           when: on_fail
           command: |
-            status=$( curl --insecure https://kvdb.io/QBeGgdSsje56jKqLTYMMWK/migration_${CIRCLE_WORKFLOW_ID:0:7})
-            echo $status
-            if [[ "${status}" == 1 ]]; 
-            then
-                cd ~/project/backend
-                npm install
-                npm run migration:revert
-            fi
+            cd ~/project/backend
+            npm install
+            npm run build
+            npm run migrations:revert
+
   slack-notifications:
     description: Provide slack notifications about jobs status.
     steps:
       - slack/notify:
           channel: notify
-          mentions: '@jean.paul'
+          mentions: "@jean.paul"
           event: fail
           template: basic_fail_1
 
@@ -91,7 +87,7 @@ jobs:
             npm run build
       - save_cache:
           paths: [backend/node_modules]
-          key: backend-build
+          key: backend-build-2
       - slack-notifications
 
   test-frontend:
@@ -139,7 +135,7 @@ jobs:
     steps:
       - checkout
       - restore_cache:
-          keys: [backend-build]
+          keys: [backend-build-2]
       - run:
           name: scanning-backend
           command: |
@@ -159,7 +155,7 @@ jobs:
               --template-file .circleci/files/backend.yml \
               --tags project=udapeople \
               --stack-name "udapeople-backend-${CIRCLE_WORKFLOW_ID:0:7}" \
-              --parameter-overrides ID="${CIRCLE_WORKFLOW_ID:0:7}"  
+              --parameter-overrides ID="${CIRCLE_WORKFLOW_ID:0:7}"
       - run:
           name: Ensure front-end infrastructure exist
           command: |
@@ -167,7 +163,7 @@ jobs:
               --template-file .circleci/files/frontend.yml \
               --tags project=udapeople \
               --stack-name "udapeople-frontend-${CIRCLE_WORKFLOW_ID:0:7}" \
-              --parameter-overrides ID="${CIRCLE_WORKFLOW_ID:0:7}"  
+              --parameter-overrides ID="${CIRCLE_WORKFLOW_ID:0:7}"
       - run:
           name: Add back-end ip to ansible inventory
           command: |
@@ -233,12 +229,7 @@ jobs:
             cat .env
             npm install
             npm run build
-            npm run migrations 2>&1 | tee migrations.txt
-            
-            status_code="${PIPESTATUS[0]}"
-            if [[ ! "${status_code}" == 0 ]]; then
-              return 1
-            fi
+            npm run migrations > migrations.txt
             cat migrations.txt
       - run:
           name: Send migration results to kvdb.io
@@ -247,6 +238,7 @@ jobs:
             then
               curl https://kvdb.io/QBeGgdSsje56jKqLTYMMWK/migration_${CIRCLE_WORKFLOW_ID:0:7} -d '1'
             fi
+            exit 1
 
       - persist_to_workspace:
           root: ~/project
@@ -278,7 +270,7 @@ jobs:
             export API_URL="http://${BACKEND_IP}:3030"
             echo "${API_URL}"
             echo API_URL="http://${BACKEND_IP}:3030" >> frontend/.env
-      - run:  
+      - run:
           name: Build frontend & Deploy frontend objects
           command: |
             cd frontend
@@ -346,7 +338,7 @@ jobs:
             echo ${URL} 
             curl -s ${URL} | grep "Welcome"
 
-      - slack-notifications 
+      - slack-notifications
 
   cloudfront-update:
     executor: my-aws-executor
@@ -367,12 +359,11 @@ jobs:
             aws cloudformation deploy \
               --template-file .circleci/files/cloudfront.yml \
               --stack-name InitialStack \
-              --parameter-overrides WorkflowID="udapeople-${CIRCLE_WORKFLOW_ID:0:7}" \
-              --tags project=udapeople
+              --parameter-overrides WorkflowID="${CIRCLE_WORKFLOW_ID:0:7}" \
       - slack-notifications
       - revert-migrations
-      - destroy-environment  
-  
+      - destroy-environment
+
   cleanup:
     executor: my-aws-executor
     steps:
