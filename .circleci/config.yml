@@ -138,6 +138,7 @@ jobs:
           name: scanning-backend
           command: |
             cd backend
+            npm i
             npm audit fix --audit-level=critical --force
       - slack-notifications
 
