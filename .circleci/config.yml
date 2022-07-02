@@ -77,8 +77,6 @@ jobs:
     executor: my-node-executor
     steps:
       - checkout
-      - restore_cache:
-          keys: [backend-build]
       - run:
           name: Back-end build
           command: |
@@ -108,7 +106,7 @@ jobs:
     steps:
       - checkout
       - restore_cache:
-          keys: [backend-build]
+          keys: [backend-build-2]
       - run:
           name: testing backend
           command: |
