@@ -243,7 +243,6 @@ jobs:
           root: ~/project
           paths:
             - backend
-      - slack-notifications
       - revert-migrations
       - destroy-environment
 
