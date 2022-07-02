@@ -5,19 +5,7 @@
     src: ~/project/artifact.tar.gz
     dest: /home/ubuntu/backend.tar.gz
 
-- name: remove dependencies that are no longer required
-  become: yes
-  apt:
-    autoremove: yes
-
-- name: "install dependencies."
-  become: yes
-  apt:
-    name: ["nodejs", "npm"]
-    state: latest
-    update_cache: yes
-
-- name: Start PM2
+- name: Build the application
   shell: |
     cd /home/ubuntu/
     tar xzvf backend.tar.gz
@@ -27,4 +15,8 @@
     sudo npm install -g webpack-dev-server
     sudo npm install
     sudo npm run build
+
+- name: Start PM2
+  shell: |
+    cd backend
     sudo pm2 start npm --name backend -- start
