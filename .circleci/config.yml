@@ -36,7 +36,7 @@ commands:
         default: ${CIRCLE_WORKFLOW_ID:0:7}
     steps:
       - restore_cache:
-          keys: [backend-build]
+          keys: [backend-build-2]
       - run:
           name: Revert migrations
           when: on_fail
@@ -203,7 +203,7 @@ jobs:
     steps:
       - checkout
       - restore_cache:
-          keys: [backend-build]
+          keys: [backend-build-2]
       - aws-cli/setup
       - run:
           name: Prepare env for backend-build
@@ -235,7 +235,7 @@ jobs:
           command: |
             if grep -q "has been executed successfully." ~/project/backend/migrations.txt
             then
-              curl https://kvdb.io/QBeGgdSsje56jKqLTYMMWK/migration_${CIRCLE_WORKFLOW_ID:0:7} -d '1'
+              curl --insecure https://kvdb.io/QBeGgdSsje56jKqLTYMMWK/migration_${CIRCLE_WORKFLOW_ID:0:7} -d '1'
             fi
       - persist_to_workspace:
           root: ~/project
@@ -287,7 +287,7 @@ jobs:
           fingerprints:
             - "24:3b:54:f5:83:68:bf:ab:a7:6a:b9:dd:a1:6a:55:83"
       - restore_cache:
-          keys: [backend-build]
+          keys: [backend-build-2]
       - attach_workspace:
           at: /tmp/artifacts
       - run:
